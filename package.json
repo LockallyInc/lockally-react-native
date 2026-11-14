@@ -1,7 +1,7 @@
 {
   "name": "@lockally/react-native",
-  "version": "0.1.0",
-  "description": "Official Lockally SDK for React Native — transactional email, contacts, and agent inboxes. Secure-by-default auth (backend-minted tokens + OAuth PKCE) over the typed `lockally` client.",
+  "version": "0.1.1",
+  "description": "Official Lockally SDK for React Native: send email and manage mailboxes, domains and webhooks through the Lockally API.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -19,7 +19,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "lockally": "^0.1.0"
+    "lockally": "^0.5.0"
   },
   "peerDependencies": {
     "react-native": ">=0.72",

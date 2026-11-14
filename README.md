@@ -11,8 +11,8 @@
 
 # Lockally for React Native
 
-Official React Native SDK for the [Lockally](https://lockally.com) API. It wraps
-the typed [`lockally`](https://www.npmjs.com/package/lockally) client with
+Official [Lockally](https://lockally.com) SDK for React Native: send email and manage mailboxes, domains and webhooks through the Lockally API.
+It wraps the typed [`lockally`](https://www.npmjs.com/package/lockally) client with
 secure-by-default auth (backend-minted tokens + OAuth 2.1 PKCE), automatic
 retries, idempotency keys, and cursor pagination.
 
@@ -34,7 +34,7 @@ import "react-native-get-random-values";
 
 ## 🔐 Security: never ship a live API key
 
-A React Native bundle is distributed to devices — anything in it, including a
+A React Native bundle is distributed to devices: anything in it, including a
 `lk_live_…` key, can be extracted. A leaked send-scoped key is an open spam relay
 billed to you.
 
@@ -117,4 +117,4 @@ Non-2xx responses can be mapped to `LockallyApiError` (`status` / `code` /
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).

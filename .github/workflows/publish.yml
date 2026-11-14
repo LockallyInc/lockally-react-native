@@ -1,13 +1,28 @@
 # Release workflow for the React Native SDK (npm package `@lockally/react-native`).
 #
-# TEMPLATE — inert in this monorepo. Copy to `.github/workflows/publish.yml` in
+# TEMPLATE, inert in this monorepo. Copy to `.github/workflows/publish.yml` in
 # the SDK's own repo (github.com/lockallyinc/lockally-react-native). Tag-driven:
 # push `vX.Y.Z`.
 #
-# One-time setup in that repo:
-#   - Add repo secret NPM_TOKEN = an npm automation token scoped to the
-#     @lockally org. Claude never handles this token.
-#   - `id-token: write` enables npm provenance — no extra secret needed.
+# One-time setup (OIDC trusted publishing, so NO token and no repo secret):
+#   - On npmjs.com → @lockally/react-native → Settings → Trusted publisher →
+#     GitHub Actions:
+#       Organization or user:  LockallyInc
+#       Repository:            lockally-react-native
+#       Workflow filename:     publish.yml
+#       Environment:           leave empty (this workflow declares none)
+#   - Under "Allowed actions", tick **Allow npm publish**. Policies created from
+#     September 2026 default to `npm stage publish` only, and this workflow runs
+#     a plain `npm publish`, so without that tick the release is refused.
+#   - A new policy must complete a successful publish within 2 days or it expires
+#     and cannot be reused, so register it when the release is ready to go, not
+#     weeks ahead.
+#   - The owner is `LockallyInc` with that exact casing. npm compares these
+#     fields case-sensitively.
+#   The policy replaces the @lockally-scoped automation token: `id-token: write`
+#   below is what npm verifies, and npm attaches provenance by itself on a trusted
+#   publish, so the explicit `--provenance` flag is gone too. Claude never handles
+#   these credentials: the policy is registered by the account owner in the npm UI.
 name: Publish npm
 
 on:
@@ -16,7 +31,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # npm provenance
+  id-token: write   # OIDC trusted publishing (and the provenance it generates)
 
 jobs:
   publish:
@@ -25,10 +40,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing has two floors: npm >= 11.5.1 and Node >= 22.14.0.
+      # Node 22 ships npm 10.x, so the publishing npm is installed rather than
+      # inherited. npm 11.21.2 is the newest line that still accepts Node 22
+      # (npm 12 wants >= 22.22).
+      #
+      # Both floors are asserted because neither failure says what it is. An npm
+      # too old looks for a token it will not find and dies on ENEEDAUTH, which
+      # reads like a missing secret; a Node below the floor is simply refused by
+      # the exchange. Either way you end up looking in the wrong place.
+      - name: Install an npm that can do trusted publishing
+        run: |
+          npm install -g npm@11.21.2
+          npm_want=11.5.1
+          npm_have=$(npm --version)
+          node_have=$(node --version); node_have=${node_have#v}
+          node_want=22.14.0
+          echo "node $node_have, npm $npm_have"
+          if [ "$(printf '%s\n%s\n' "$npm_want" "$npm_have" | sort -V | head -1)" != "$npm_want" ]; then
+            echo "::error::npm $npm_have cannot do OIDC trusted publishing (need >= $npm_want). Pin a newer npm in this step; this release has no token to fall back on."
+            exit 1
+          fi
+          if [ "$(printf '%s\n%s\n' "$node_want" "$node_have" | sort -V | head -1)" != "$node_want" ]; then
+            echo "::error::Node $node_have is below npm trusted publishing's floor of $node_want. Raise node-version in the setup-node step above."
+            exit 1
+          fi
       - run: npm install --no-audit --no-fund
       - run: npm run build
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # No NODE_AUTH_TOKEN. With no matching trusted publisher on npmjs.com this
+      # fails (E404/E403) rather than publishing or skipping.
+      - run: npm publish --access public
